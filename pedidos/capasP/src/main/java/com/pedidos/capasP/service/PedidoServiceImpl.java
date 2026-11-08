@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,6 +58,15 @@ public class PedidoServiceImpl implements PedidoService{
 
     @Override
     public Pedido crearPedidoConValidacionStock(Pedido pedido, Integer productoId, Integer cantidadComprada){
+        if (productoId == null) {
+            throw new RuntimeException("Debe indicar el id del producto.");
+        }
+        if (cantidadComprada == null || cantidadComprada <= 0) {
+            throw new RuntimeException("La cantidad debe ser mayor a 0.");
+        }
+        if (pedido == null) {
+            pedido = new Pedido();
+        }
         String urlProducto = productosUrl + "/Productos/" + productoId;
         String urlConsumoStock = productosUrl + "/Productos/Consumo/" + productoId;
         try {
@@ -96,7 +107,15 @@ public class PedidoServiceImpl implements PedidoService{
             if (mensajeOriginal.contains("Stock insuficiente")) {
                 throw new RuntimeException(mensajeOriginal);
             }
-            throw new RuntimeException(mensajeOriginal);        }
+            if (mensajeOriginal.startsWith("404")) {
+                throw new RuntimeException("El producto con ID " + productoId + " no existe.");
+            }
+            if (pedido.getUsuario() == null || pedido.getUsuario().isBlank()) {
+                throw new RuntimeException("Debe indicar el usuario del pedido.");
+            }
+
+            throw new RuntimeException(mensajeOriginal);
+        }
     }
 
     @Override
