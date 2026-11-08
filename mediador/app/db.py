@@ -10,7 +10,7 @@ def obtener_conexion():
      if render_postgres():
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        return psycopg2.connect(
+        conexion = psycopg2.connect(
             host = config.db_host,
             port = config.db_port,
             user = config.db_usuario,
@@ -19,13 +19,18 @@ def obtener_conexion():
             sslmode = "require",
             cursor_factory = RealDictCursor
         )
+        with conexion.cursor() as cursor:
+            cursor.execute("CREATE SCHEMA IF NOT EXISTS broker")
+            cursor.execute("SET search_path TO broker")
+        conexion.commit()
+        return conexion
      return pymysql.connect(
         host = config.db_host,
         port = config.db_port,
         user = config.db_usuario,
         password = config.db_password,
         database = config.db_name,
-        cursorclass = DictCursor  
+        cursorclass = DictCursor
     )
      
 #Como solo copie y pegue su ejemplo de broker me di cuenta que como es con postgrest me toco separar el codigo sql crudo en su version mysql para mi comu

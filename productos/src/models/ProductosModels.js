@@ -39,6 +39,7 @@ const Producto = sequelize.define('Producto',
     },
     {
         tableName: 'Productos',
+        schema: process.env.DB_SCHEMA || undefined,
         timestamps: false
     }
 
