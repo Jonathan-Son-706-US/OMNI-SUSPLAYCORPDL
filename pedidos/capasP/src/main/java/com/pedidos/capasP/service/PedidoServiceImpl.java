@@ -19,6 +19,8 @@ public class PedidoServiceImpl implements PedidoService{
     private final PedidoRepository pedidoRepository;
     private final DetallePedidoService detallePedidoService;
     private final RestTemplate restTemplate;
+    @org.springframework.beans.factory.annotation.Value("${productos.url}")
+    private String productosUrl;
 
     public PedidoServiceImpl(PedidoRepository pedidoRepository, DetallePedidoService detallePedidoService, RestTemplate restTemplate) {
         this.pedidoRepository = pedidoRepository;
@@ -54,8 +56,8 @@ public class PedidoServiceImpl implements PedidoService{
 
     @Override
     public Pedido crearPedidoConValidacionStock(Pedido pedido, Integer productoId, Integer cantidadComprada){
-        String urlProducto = "http://localhost:3000/Productos/" + productoId;
-        String urlConsumoStock = "http://localhost:3000/Productos/Consumo/" + productoId;
+        String urlProducto = productosUrl + "/Productos/" + productoId;
+        String urlConsumoStock = productosUrl + "/Productos/Consumo/" + productoId;
         try {
             ResponseEntity<RespuestaProductoDTO> respuesta = restTemplate.getForEntity(urlProducto, RespuestaProductoDTO.class);
 
@@ -114,7 +116,7 @@ public class PedidoServiceImpl implements PedidoService{
             List<DetallePedido> detalles = detallePedidoService.listarDetalles();
             for (DetallePedido det : detalles) {
                 if (det.getPedido() != null && det.getPedido().getId_pedido().equals(id)) {
-                    String urlDevolver = "http://localhost:3000/Productos/DevolverStock/" + det.getProducto_ID();
+                    String urlDevolver = productosUrl + "/Productos/DevolverStock/" + det.getProducto_ID();
                     Map<String, Integer> bodyDevolver = Map.of("cantidad_en_stock", det.getCantidad());
                     restTemplate.put(urlDevolver, bodyDevolver);
                 }
