@@ -11,6 +11,8 @@ class Config(BaseSettings):
     db_usuario: str = "root"
     db_password: str = ""
     db_name: str = "susplaycorpp"
+    db_dialect: str = "mysql"
+    
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
