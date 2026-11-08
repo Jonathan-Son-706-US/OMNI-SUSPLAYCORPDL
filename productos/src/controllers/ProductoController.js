@@ -25,7 +25,7 @@ async function BuscarPorId(req, res) {
 async function BuscarProductosActivos(req, res) {
     try {
         const productoActivo = await ProductoModel.findAll({
-            where: {estado : 1}
+            where: {estado : true}
         });
          res.status(200).json(productoActivo);      
     } catch (Problema) {
@@ -40,7 +40,7 @@ async function BuscarProductosActivos(req, res) {
 async function BuscarProductosInactivos(req, res) {
     try {
         const productoInactivo = await ProductoModel.findAll({
-            where: {estado : 0}
+            where: {estado : false}
         });
          res.status(200).json(productoInactivo);      
     } catch (Problema) {
