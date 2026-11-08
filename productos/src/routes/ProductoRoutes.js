@@ -1,0 +1,15 @@
+const express = require('express')
+const router = express.Router()
+const ProductoControllers = require('../controllers/ProductoController')
+router.get('/Productos/Activos', ProductoControllers.BuscarProductosActivos)
+router.get('/Productos/Inactivos', ProductoControllers.BuscarProductosInactivos)
+router.get('/Productos/Categoria/:categoria', ProductoControllers.BuscarPorCategoria)
+router.get('/Productos/:id', ProductoControllers.BuscarPorId)
+router.get('/Productos', ProductoControllers.BuscarTodosLosProductos)
+router.post('/Productos', ProductoControllers.CrearProducto)
+router.put('/Productos/:id', ProductoControllers.ActualizarProducto)
+router.delete('/Productos/:id', ProductoControllers.EliminarProducto)
+router.put('/Productos/Consumo/:id', ProductoControllers.ConsumoStock)
+router.put('/Productos/DevolverStock/:id', ProductoControllers.DevolverStock)
+
+module.exports = router
