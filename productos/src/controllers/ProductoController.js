@@ -87,15 +87,15 @@ async function CrearProducto(req, res) {
         stock_producto,
         categoria_producto
     } = req.body
-    if(!nombre_producto || !precio_producto || !descripcion_producto || !stock_producto || !categoria_producto){
-        return res.status(400).json({
-            Problema: 'No se agregaron las datos obligatorios para la siguiente gestion'       
-    })
-    }
     if(precio_producto <= 0||stock_producto < 0){
         return res.status(400).json({
             Problema : 'Estas categorias no Pueden tener Precio u Stock negativo'
         })
+    }
+    if(!nombre_producto || !precio_producto || !descripcion_producto || !stock_producto || !categoria_producto){
+        return res.status(400).json({
+            Problema: 'No se agregaron las datos obligatorios para la siguiente gestion'       
+    })
     }
     try {
         const ProductoNuevo = await ProductoModel.create({nombre_producto, precio_producto, descripcion_producto, stock_producto, categoria_producto})
