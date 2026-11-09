@@ -9,7 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.pedidos.capasP.ProductoDTO.ItemPedidoDTO;
+import java.util.ArrayList;
 
 
 import java.util.List;
@@ -57,63 +58,79 @@ public class PedidoServiceImpl implements PedidoService{
     }
 
     @Override
-    public Pedido crearPedidoConValidacionStock(Pedido pedido, Integer productoId, Integer cantidadComprada){
-        if (productoId == null) {
-            throw new RuntimeException("Debe indicar el id del producto.");
+    public Pedido crearPedidoConValidacionStock(Pedido pedido, List<ItemPedidoDTO> items){
+        if (items == null || items.isEmpty()) {
+            throw new RuntimeException("El pedido debe contener al menos un producto.");
         }
-        if (cantidadComprada == null || cantidadComprada <= 0) {
-            throw new RuntimeException("La cantidad debe ser mayor a 0.");
+        if (pedido == null || pedido.getUsuario() == null || pedido.getUsuario().isBlank()) {
+            throw new RuntimeException("Debe indicar el usuario del pedido.");
         }
-        if (pedido == null) {
-            pedido = new Pedido();
-        }
-        String urlProducto = productosUrl + "/Productos/" + productoId;
-        String urlConsumoStock = productosUrl + "/Productos/Consumo/" + productoId;
         try {
-            ResponseEntity<RespuestaProductoDTO> respuesta = restTemplate.getForEntity(urlProducto, RespuestaProductoDTO.class);
+            double totalGeneral = 0.0;
+            List<ProductoDTO> productos = new ArrayList<>();
 
-            if (!respuesta.getStatusCode().is2xxSuccessful() || respuesta.getBody() == null || respuesta.getBody().getProducto() == null) {
-                throw new RuntimeException("El producto con ID " + productoId + " no existe o el servicio de productos no respondió.");
+            for (int i = 0; i < items.size(); i++) {
+                ItemPedidoDTO item = items.get(i);
+
+                if (item.getProductoId() == null || item.getCantidad() == null || item.getCantidad() <= 0) {
+                    throw new RuntimeException("Cada ítem debe tener un producto válido y cantidad mayor a 0.");
+                }
+                for (int j = 0; j < i; j++) {
+                    if (items.get(j).getProductoId().equals(item.getProductoId())) {
+                        throw new RuntimeException("El producto " + item.getProductoId() + " está repetido en el pedido.");
+                    }
+                }
+
+                String urlProducto = productosUrl + "/Productos/" + item.getProductoId();
+                ResponseEntity<RespuestaProductoDTO> respuesta = restTemplate.getForEntity(urlProducto, RespuestaProductoDTO.class);
+
+                if (!respuesta.getStatusCode().is2xxSuccessful() || respuesta.getBody() == null || respuesta.getBody().getProducto() == null) {
+                    throw new RuntimeException("El producto con ID " + item.getProductoId() + " no existe o el servicio de productos no respondió.");
+                }
+
+                ProductoDTO producto = respuesta.getBody().getProducto();
+
+                if (producto.getStock_producto() < item.getCantidad()) {
+                    throw new RuntimeException("Stock insuficiente para el producto: " + producto.getNombre_producto() +
+                            " (Stock actual: " + producto.getStock_producto() + ")");
+                }
+
+                productos.add(producto);
+                totalGeneral += producto.getPrecio_producto() * item.getCantidad();
             }
 
-            ProductoDTO producto = respuesta.getBody().getProducto();
-
-            if (producto.getStock_producto() < cantidadComprada) {
-                throw new RuntimeException("Stock insuficiente. Stock actual en bodega: " + producto.getStock_producto());
-            }
-
-            Double precioUnitario = producto.getPrecio_producto();
-            Double totalCalculado = precioUnitario * cantidadComprada;
-            pedido.setTotal(totalCalculado);
-            pedido.setEstado("ACTIVO"); //no me quedo de otra que forzar activo cuando se cree un pedido sino me rompe la logica general del eliminar pedido
+            pedido.setTotal(totalGeneral);
+            pedido.setEstado("ACTIVO");
             Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
-            DetallePedido detalle = new DetallePedido();
-            detalle.setPedido(pedidoGuardado);
-            detalle.setProducto_ID(productoId);
-            detalle.setCantidad(cantidadComprada);
-            detalle.setPrecio_unitario(precioUnitario);
-            detallePedidoService.guardarDetalle(detalle);
-            restTemplate.put(urlConsumoStock, new ConsumoStock(cantidadComprada));
+            List<DetallePedido> detallesCreados = new ArrayList<>();
+            for (int i = 0; i < items.size(); i++) {
+                ItemPedidoDTO item = items.get(i);
+
+                DetallePedido detalle = new DetallePedido();
+                detalle.setPedido(pedidoGuardado);
+                detalle.setProducto_ID(item.getProductoId());
+                detalle.setCantidad(item.getCantidad());
+                detalle.setPrecio_unitario(productos.get(i).getPrecio_producto());
+                detallesCreados.add(detallePedidoService.guardarDetalle(detalle));
+
+                String urlConsumoStock = productosUrl + "/Productos/Consumo/" + item.getProductoId();
+                restTemplate.put(urlConsumoStock, new ConsumoStock(item.getCantidad()));
+            }
+            pedidoGuardado.setDetalles(detallesCreados);
             return pedidoGuardado;
+
         } catch (Exception e) {
             String mensajeOriginal = e.getMessage();
+            if (mensajeOriginal == null) {
+                mensajeOriginal = "Error al procesar el pedido.";
+            }
             if (mensajeOriginal.contains("El producto está inactivo")) {
-                throw new RuntimeException("El producto seleccionado se encuentra inactivo.");
-            }
-            if (mensajeOriginal.contains("ConstraintViolationImpl") || mensajeOriginal.contains("Validation failed")) {
-                throw new RuntimeException("Formato de estado no válido. El estado admitido por defecto es ACTIVO.");
-            }
-            if (mensajeOriginal.contains("Stock insuficiente")) {
-                throw new RuntimeException(mensajeOriginal);
+                throw new RuntimeException("Uno de los productos seleccionados se encuentra inactivo.");
             }
             if (mensajeOriginal.startsWith("404")) {
-                throw new RuntimeException("El producto con ID " + productoId + " no existe.");
+                throw new RuntimeException("Uno de los productos del pedido no existe.");
             }
-            if (pedido.getUsuario() == null || pedido.getUsuario().isBlank()) {
-                throw new RuntimeException("Debe indicar el usuario del pedido.");
-            }
-
             throw new RuntimeException(mensajeOriginal);
         }
     }
@@ -132,9 +149,8 @@ public class PedidoServiceImpl implements PedidoService{
             }
             pedido.setEstado("CANCELADO");
             pedidoRepository.save(pedido);
-            List<DetallePedido> detalles = detallePedidoService.listarDetalles();
-            for (DetallePedido det : detalles) {
-                if (det.getPedido() != null && det.getPedido().getId_pedido().equals(id)) {
+            if (pedido.getDetalles() != null) {
+                for (DetallePedido det : pedido.getDetalles()) {
                     String urlDevolver = productosUrl + "/Productos/DevolverStock/" + det.getProducto_ID();
                     Map<String, Integer> bodyDevolver = Map.of("cantidad_en_stock", det.getCantidad());
                     restTemplate.put(urlDevolver, bodyDevolver);

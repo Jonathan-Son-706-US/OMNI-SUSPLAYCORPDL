@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "pedidos")
@@ -21,6 +21,16 @@ public class Pedido {
     @CreationTimestamp
         @Column(name = "fecha_emision", updatable = false)
         private LocalDateTime fecha_emision;
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<DetallePedido> detalles;
+
+    public List<DetallePedido> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetallePedido> detalles) {
+        this.detalles = detalles;
+    }
 
     public Integer getId_pedido() {
         return id_pedido;

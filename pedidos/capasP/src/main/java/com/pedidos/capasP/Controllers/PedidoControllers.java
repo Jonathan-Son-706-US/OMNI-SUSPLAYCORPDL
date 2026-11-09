@@ -1,4 +1,5 @@
 package com.pedidos.capasP.Controllers;
+import com.pedidos.capasP.ProductoDTO.PedidoConsultaDTO;
 import com.pedidos.capasP.models.Pedido;
 import com.pedidos.capasP.service.PedidoService;
 import org.springframework.http.ResponseEntity;
@@ -6,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RequestMapping("/Pedido")
 @RestController
@@ -48,8 +48,7 @@ public class PedidoControllers {
         try {
             Pedido nuevoPedido = pedidoService.crearPedidoConValidacionStock(
                     request.getPedido(),
-                    request.getProductoId(),
-                    request.getCantidad()
+                    request.getItems()
             );
             return ResponseEntity.status(201).body(nuevoPedido);
         } catch (Exception e) {

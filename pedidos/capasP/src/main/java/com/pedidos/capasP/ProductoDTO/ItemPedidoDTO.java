@@ -1,17 +1,8 @@
-package com.pedidos.capasP.Controllers;
-import com.pedidos.capasP.models.Pedido;
-public class PedidoConsultaDTO {
-    private Pedido pedido;
+package com.pedidos.capasP.ProductoDTO;
+
+public class ItemPedidoDTO {
     private Integer productoId;
     private Integer cantidad;
-
-    public Pedido getPedido() {
-        return pedido;
-    }
-
-    public void setPedido(Pedido pedido) {
-        this.pedido = pedido;
-    }
 
     public Integer getProductoId() {
         return productoId;
